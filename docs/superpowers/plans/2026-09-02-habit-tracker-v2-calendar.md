@@ -905,7 +905,7 @@ test('monthViewHTML: nav back button opens the year and sets --habit-accent', ()
 
 test('yearBlockHTML: 12 month buttons, current month flagged, sticky heading', () => {
   const html = yearBlockHTML({ year: 2026, habit: habit(), today: '2026-09-15' });
-  assert.equal((html.match(/class="ymini/g) || []).length, 12);
+  assert.equal((html.match(/class="ymini[ "]/g) || []).length, 12); // 12 month buttons (not the -label/-grid spans)
   assert.match(html, /class="ymini is-cur" data-action="open-month" data-id="h1" data-year="2026" data-month="8"/);
   assert.ok(html.includes('<h2 class="year-heading">2026</h2>'));
 });
