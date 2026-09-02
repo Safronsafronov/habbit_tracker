@@ -1,4 +1,7 @@
-import { rangeBounds, todayStr, currentStreak, totalDays, parseDate } from './stats.js';
+import {
+  rangeBounds, todayStr, currentStreak, longestStreak,
+  totalDays, completionRate, parseDate,
+} from './stats.js';
 import { buildGrid } from './heatmap.js';
 import { ACCENTS, ACCENT_KEYS } from './accents.js';
 
@@ -89,15 +92,37 @@ export function listHTML({ state, range, theme }) {
 // --- Stubs. Real implementations land in later tasks; signatures are fixed now
 //     so app.js imports never change. ---
 
-// Task 7 replaces this.
 export function detailHTML({ state, id, range, theme }) {
   const h = state.habits.find((x) => x.id === id);
+  const today = todayStr();
+  const { fromStr, toStr } = rangeBounds(range, today, h.createdAt);
+  const cs = currentStreak(h.entries, today);
+  const ls = longestStreak(h.entries);
+  const tot = totalDays(h.entries);
+  const { pct } = completionRate(h.entries, fromStr, toStr);
+  const accent = ACCENTS[h.accent][theme];
+  const heading = `${h.emoji ? esc(h.emoji) + ' ' : ''}${esc(h.name)}`;
+
   return `
     <header class="app-header">
       <button class="icon-btn" data-action="back" aria-label="Назад">‹</button>
-      <h1>${esc(h ? h.name : '')}</h1><span class="icon-btn"></span>
+      <h1>${heading}</h1>
+      <span class="icon-btn" aria-hidden="true"></span>
     </header>
-    <p class="empty">Экран деталей — Task 7.</p>`;
+    <div class="detail-heat" style="--habit-accent:${accent}">
+      ${heatmapHTML({ habit: h, range, theme, interactive: true })}
+    </div>
+    ${segmentHTML(range, { withAll: true })}
+    <div class="stats">
+      <div class="stat"><b>${cs}</b><span>Текущий стрик</span></div>
+      <div class="stat"><b>${ls}</b><span>Лучший стрик</span></div>
+      <div class="stat"><b>${tot}</b><span>Всего дней</span></div>
+      <div class="stat"><b>${pct}%</b><span>За период</span></div>
+    </div>
+    <div class="detail-actions">
+      <button class="btn ghost" data-action="edit-habit" data-id="${h.id}">Изменить</button>
+      <button class="btn danger" data-action="delete-habit" data-id="${h.id}">Удалить</button>
+    </div>`;
 }
 
 // Task 8 replaces this.

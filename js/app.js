@@ -111,6 +111,19 @@ document.addEventListener('click', (e) => {
       render();
       break;
     }
+    case 'toggle-cell':
+      state = toggleEntry(state, d.id, d.date);
+      persist();
+      render();
+      break;
+    case 'delete-habit':
+      if (confirm('Удалить привычку и всю её историю?')) {
+        state = deleteHabit(state, d.id);
+        persist();
+        location.hash = '#/';
+        render();
+      }
+      break;
     default:
       break;
   }
