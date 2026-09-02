@@ -75,6 +75,37 @@ document.addEventListener('click', (e) => {
       persist();
       render();
       break;
+    case 'add':
+      sheet = { mode: 'add', accent: nextAccent(state) };
+      render();
+      break;
+    case 'edit-habit':
+      sheet = { mode: 'edit', id: d.id, accent: getHabit(state, d.id).accent };
+      render();
+      break;
+    case 'pick-accent':
+      sheet.accent = d.accent;
+      render();
+      break;
+    case 'cancel-sheet':
+      sheet = null;
+      render();
+      break;
+    case 'save-habit': {
+      const nameEl = document.getElementById('habit-name');
+      const name = nameEl.value.trim();
+      if (!name) { nameEl.focus(); return; }
+      const emoji = document.getElementById('habit-emoji').value.trim();
+      if (sheet.mode === 'add') {
+        state = createHabit(state, { name, emoji, accent: sheet.accent }).state;
+      } else {
+        state = updateHabit(state, sheet.id, { name, emoji, accent: sheet.accent });
+      }
+      sheet = null;
+      persist();
+      render();
+      break;
+    }
     default:
       break;
   }

@@ -1,6 +1,6 @@
 import { rangeBounds, todayStr, currentStreak, totalDays, parseDate } from './stats.js';
 import { buildGrid } from './heatmap.js';
-import { ACCENTS } from './accents.js';
+import { ACCENTS, ACCENT_KEYS } from './accents.js';
 
 export const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
@@ -110,7 +110,35 @@ export function settingsHTML({ state, theme }) {
     <p class="empty">Настройки — Task 8.</p>`;
 }
 
-// Task 6 replaces this.
 export function sheetHTML({ sheet, state, theme }) {
-  return '';
+  const editing = sheet.mode === 'edit';
+  const h = editing ? state.habits.find((x) => x.id === sheet.id) : null;
+  const name = h ? h.name : '';
+  const emoji = h ? h.emoji : '';
+
+  const dots = ACCENT_KEYS.map((k) => (
+    `<button class="accent-dot${k === sheet.accent ? ' is-on' : ''}" data-action="pick-accent" data-accent="${k}" style="--dot:${ACCENTS[k][theme]}" aria-label="${k}"></button>`
+  )).join('');
+
+  return `
+    <div class="sheet-backdrop" data-action="cancel-sheet"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <h2>${editing ? 'Изменить привычку' : 'Новая привычка'}</h2>
+      <label class="field">
+        <span>Название</span>
+        <input id="habit-name" type="text" maxlength="40" value="${esc(name)}" placeholder="Например, Читать 20 минут">
+      </label>
+      <label class="field">
+        <span>Эмодзи</span>
+        <input id="habit-emoji" type="text" maxlength="8" value="${esc(emoji)}" placeholder="необязательно">
+      </label>
+      <div class="field">
+        <span>Цвет</span>
+        <div class="accent-row">${dots}</div>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn ghost" data-action="cancel-sheet">Отмена</button>
+        <button class="btn primary" data-action="save-habit">Сохранить</button>
+      </div>
+    </div>`;
 }
