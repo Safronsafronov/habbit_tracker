@@ -5,7 +5,7 @@ import {
 import { todayStr } from './stats.js';
 import { todayYM, listMonths, shiftYM, ymKey, dayState } from './calendar.js';
 import {
-  mainHTML, monthViewHTML, monthGridsHTML, yearViewHTML,
+  mainHTML, monthViewHTML, monthGridsHTML, yearViewHTML, yearBlocksHTML,
   settingsHTML, sheetHTML, contextMenuHTML,
 } from './ui.js';
 
@@ -96,6 +96,25 @@ function wireMonthScroll(sc) {
     extending = false;
   }, { passive: true });
 }
+function wireYearScroll(sc) {
+  if (!sc) return;
+  let extending = false;
+  sc.addEventListener('scroll', () => {
+    if (extending) return;
+    const nearTop = sc.scrollTop < 200;
+    const nearBottom = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 200;
+    if (!nearTop && !nearBottom) return;
+    extending = true;
+    const prevHeight = sc.scrollHeight;
+    if (nearTop) yearWindow.from -= 1;
+    if (nearBottom) yearWindow.to += 1;
+    sc.innerHTML = yearBlocksHTML({
+      years: windowYears(), habit: getHabit(state, yearWindow.id), today: todayStr(),
+    });
+    if (nearTop) sc.scrollTop += sc.scrollHeight - prevHeight;
+    extending = false;
+  }, { passive: true });
+}
 
 // ---------- view swap with slide transition ----------
 function swapView(html, dir) {
@@ -159,6 +178,7 @@ function render(opts = {}) {
     const sc = view.querySelector('#year-scroll');
     scrollIntoContainer(sc, sc && (sc.querySelector('.ymini.is-cur') || sc.querySelector('.year-block')));
     pendingYearScroll = null;
+    wireYearScroll(sc);
   }
 
   sheetRoot.innerHTML = sheet ? sheetHTML({ sheet, state, theme }) : '';
@@ -245,6 +265,11 @@ document.addEventListener('click', (e) => {
     case 'cancel-sheet':
       sheet = null;
       render({ instant: true });
+      break;
+    case 'open-month':
+      navDir = 1;
+      pendingMonthScroll = { year: Number(d.year), month: Number(d.month) };
+      location.hash = '#/h/' + encodeURIComponent(d.id);
       break;
     default:
       break;
