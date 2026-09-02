@@ -21,6 +21,7 @@ const MONTH_BATCH = 12;
 let state = loadState(localStorage);
 let sheet = null;               // null | {mode:'add',accent,name?,emoji?} | {mode:'edit',id,accent,name?,emoji?}
 let context = null;             // null | habitId  (set by Task 6 long-press)
+let suppressNextClick = false; // swallow the click that trails a fired long-press
 let firstRender = true;         // first render is instant (no slide)
 let navDir = null;              // 1 = push, -1 = pop; set by a click handler before it changes the hash
 
@@ -120,6 +121,43 @@ function wireYearScroll(sc) {
   }, { passive: true });
 }
 
+function markLiftedCard() {
+  appRoot.querySelectorAll('.card.lifted').forEach((c) => c.classList.remove('lifted'));
+  if (context) {
+    const c = appRoot.querySelector(`.card[data-id="${context}"]`);
+    if (c) c.classList.add('lifted');
+  }
+}
+
+function wireSheetSwipe() {
+  const panel = document.getElementById('sheet-panel');
+  if (!panel) return;
+  let startY = null;
+  let dy = 0;
+  panel.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('input, button')) return;
+    startY = e.clientY;
+    dy = 0;
+    panel.style.transition = 'none';
+  });
+  panel.addEventListener('pointermove', (e) => {
+    if (startY === null) return;
+    dy = Math.max(0, e.clientY - startY);
+    panel.style.transform = `translateY(${dy}px)`;
+  });
+  const end = () => {
+    if (startY === null) return;
+    panel.style.transition = '';
+    panel.style.transform = '';
+    const dismiss = dy > panel.offsetHeight * 0.3;
+    startY = null;
+    dy = 0;
+    if (dismiss) { sheet = null; render({ instant: true }); }
+  };
+  panel.addEventListener('pointerup', end);
+  panel.addEventListener('pointercancel', end);
+}
+
 // ---------- view swap with slide transition ----------
 function swapView(html, dir) {
   const instant = firstRender || dir === 0 || reduceMotion.matches || !appRoot.firstElementChild;
@@ -195,12 +233,15 @@ function render(opts = {}) {
   if (sheet) {
     const n = document.getElementById('habit-name');
     if (n) n.focus();
+    wireSheetSwipe();
   }
   ctxRoot.innerHTML = context ? contextMenuHTML({ habit: getHabit(state, context) }) : '';
+  markLiftedCard();
 }
 
 // ---------- events ----------
 document.addEventListener('click', (e) => {
+  if (suppressNextClick) { suppressNextClick = false; return; }
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const d = el.dataset;
@@ -281,6 +322,18 @@ document.addEventListener('click', (e) => {
       pendingMonthScroll = { year: Number(d.year), month: Number(d.month) };
       location.hash = '#/h/' + encodeURIComponent(d.id);
       break;
+    case 'close-context':
+      context = null;
+      render({ instant: true });
+      break;
+    case 'delete-habit':
+      if (confirm('Удалить привычку и всю её историю?')) {
+        state = deleteHabit(state, d.id);
+        persist();
+      }
+      context = null;
+      render({ instant: true });
+      break;
     default:
       break;
   }
@@ -292,5 +345,37 @@ window.addEventListener('hashchange', () => {
   render({ dir });
 });
 mq.addEventListener('change', () => { if (state.settings.theme === 'system') render({ instant: true }); });
+
+// ---------- long-press context menu ----------
+let lpTimer = null;
+let lpStartXY = null;
+
+function clearLongPress() {
+  if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+  lpStartXY = null;
+}
+
+document.addEventListener('pointerdown', (e) => {
+  if (sheet || context) return;
+  const card = e.target.closest('.card');
+  if (!card) return;
+  lpStartXY = { x: e.clientX, y: e.clientY };
+  const id = card.dataset.id;
+  lpTimer = setTimeout(() => {
+    lpTimer = null;
+    context = id;
+    suppressNextClick = true;
+    render({ instant: true });
+  }, 450);
+});
+document.addEventListener('pointermove', (e) => {
+  if (lpTimer && lpStartXY
+    && Math.hypot(e.clientX - lpStartXY.x, e.clientY - lpStartXY.y) > 10) {
+    clearLongPress();
+  }
+});
+document.addEventListener('pointerup', clearLongPress);
+document.addEventListener('pointercancel', clearLongPress);
+document.addEventListener('scroll', clearLongPress, true);
 
 render({ instant: true });
