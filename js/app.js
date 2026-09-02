@@ -46,6 +46,9 @@ function render() {
     appRoot.innerHTML = listHTML({ state, range, theme });
   }
 
+  // Heatmaps overflow to the right; show the most recent weeks first (GitHub-style).
+  appRoot.querySelectorAll('.heatmap').forEach((h) => { h.scrollLeft = h.scrollWidth; });
+
   sheetRoot.innerHTML = sheet ? sheetHTML({ sheet, state, theme }) : '';
   if (sheet) {
     const n = document.getElementById('habit-name');
