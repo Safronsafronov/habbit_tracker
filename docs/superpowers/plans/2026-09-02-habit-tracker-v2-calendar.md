@@ -260,7 +260,7 @@ Manual/visual verification. Replaces the whole stylesheet and adds one mount poi
 - Produces (the class/DOM contract consumed by `js/ui.js` in Task 3 and `js/app.js` in Tasks 4–6):
   - Mounts: `#app` (transition stage), `#sheet`, `#context`.
   - Screen layer: `.view` (one per screen inside `#app`), transition classes `.enter-from-right`, `.enter-from-left`, `.exit-to-left`, `.exit-to-right`.
-  - Main: `.app-header` + `h1` + `.icon-btn`; `.list`; `.card` (+ `.lifted`); `.card-head`, `.card-emoji`, `.card-title`; `.strip`; `.mini-month` (+ `.is-cur`), `.mini-label`, `.mini-grid`; `.fab`; `.empty`.
+  - Main: `.app-header` + `h1` + `.icon-btn`; `.list`; `.card` (+ `.lifted`); `.card-head`, `.card-emoji`, `.card-title`; `.strip`; `.mini-month` (+ `.is-cur`), `.mini-label`, `.mini-grid`; `.fab`; `.empty`; `.banner-error` (corrupt-data banner, carried over from v1).
   - Day cell (shared by mini / month / year): `.day` (+ `.pad`) wrapping `.dot`; `[data-state]` in `future|today|marked|marked-today|plain`.
   - Sub-screen nav: `.nav-bar` + `.nav-back` (+ `.chev`) + `.nav-title` + `.nav-spacer`.
   - Month view: `.weekday-row`; `#month-scroll` / `.month-scroll`; `.month` (`[data-ym]`, `[data-cur]`), `.month-name` (+ `.is-cur`), `.month-grid`.
@@ -484,6 +484,11 @@ button.day:active .dot { transform:scale(.86); }
 .btn.danger { background:transparent; color:var(--danger); }
 .empty { flex:1; display:flex; flex-direction:column; gap:16px; align-items:center; justify-content:center;
   text-align:center; color:var(--text-secondary); padding:48px 16px; }
+.banner-error {
+  margin:8px 16px 0; padding:10px 12px; border-radius:var(--r-btn);
+  background:var(--surface); border:1px solid var(--danger); color:var(--danger);
+  font-size:12px; font-weight:550;
+}
 
 /* ===== bottom sheet ===== */
 #sheet:empty, #context:empty { display:none; }
@@ -707,7 +712,11 @@ export function mainHTML({ state, theme }) {
   )).join('');
   const empty = '<div class="empty"><p>Пока нет привычек.</p>'
     + '<button class="btn primary" data-action="add">Добавить привычку</button></div>';
+  const banner = state._corrupt
+    ? '<div class="banner-error" role="alert">Не удалось прочитать сохранённые данные. Начат новый список — старые данные не тронуты.</div>'
+    : '';
   return `
+    ${banner}
     <header class="app-header">
       <h1>Habits</h1>
       <button class="icon-btn" data-action="open-settings" aria-label="Настройки">⚙︎</button>
@@ -860,6 +869,12 @@ test('mainHTML escapes a hostile habit name and renders a 3-month strip', () => 
   assert.equal((html.match(/class="mini-month/g) || []).length, 3);
 });
 
+test('mainHTML renders the corrupt-data banner only when state._corrupt is set', () => {
+  const base = { version: 1, settings: { theme: 'system' }, habits: [] };
+  assert.ok(!mainHTML({ state: base, theme: 'light' }).includes('banner-error'));
+  assert.ok(mainHTML({ state: { ...base, _corrupt: true }, theme: 'light' }).includes('banner-error'));
+});
+
 test('monthGridHTML: past marked day is a tappable button, future day is inert', () => {
   const html = monthGridHTML({
     ym: { year: 2026, month: 8 },
@@ -911,7 +926,7 @@ Expected: FAIL — the current `js/ui.js` exports `listHTML`/`detailHTML`/`heatm
 - [ ] **Step 4: Confirm `js/ui.js` from Step 1 is in place, then run the tests to verify they pass**
 
 Run: `node --test tests/ui.test.js`
-Expected: PASS — 7 tests, 0 failures.
+Expected: PASS — 8 tests, 0 failures.
 
 - [ ] **Step 5: Run the whole suite**
 
@@ -1796,7 +1811,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 | §2.3 year view (nav `‹ Привычки`, continuous scroll across years, sticky year heading, 12 minis ×3, tap→month) | 3 (`yearViewHTML`), 4 (render/scroll), 5 (lazy both ways + `open-month`) |
 | §2.4 settings (theme segment) | 3 (`settingsHTML`), 4 (`set-theme`) |
 | §2.5 transition map (push/pop directions) | 4 (`navDir` model) |
-| §3.1 data model unchanged; `createdAt` no longer gates marking; `_corrupt` banner + `persist` guard retained | 3 (`dayCell` uses `dayState`, no `createdAt` check), 4 (`persist` guard, `delete state._corrupt` on save) |
+| §3.1 data model unchanged; `createdAt` no longer gates marking; `_corrupt` banner + `persist` guard retained | 3 (`dayCell` uses `dayState`, no `createdAt` check; `mainHTML` renders `.banner-error` on `state._corrupt`), 2 (`.banner-error` CSS), 4 (`persist` guard, `delete state._corrupt` on save) |
 | §3.2 day states (future/today/marked/marked-today/plain) | 1 (`dayState`), 2 (`.day[data-state]` CSS), 3 (`dayCell`) |
 | §3.3 `calendar.js` API | 1 |
 | §3.4 trim `stats.js` | 7 |
