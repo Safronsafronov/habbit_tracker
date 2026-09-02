@@ -1,181 +1,179 @@
-import {
-  rangeBounds, todayStr, currentStreak, longestStreak,
-  totalDays, completionRate, parseDate,
-} from './stats.js';
-import { buildGrid } from './heatmap.js';
 import { ACCENTS, ACCENT_KEYS } from './accents.js';
+import { todayStr } from './stats.js';
+import {
+  monthMatrix, monthName, weekdayLabels, dayState, ymKey, shiftYM, todayYM,
+} from './calendar.js';
 import { getHabit } from './storage.js';
 
 export const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
 ));
 
-const RANGES = [
-  ['year', 'Год'], ['half', '6 мес'], ['q', '3 мес'],
-  ['month', 'Месяц'], ['week', 'Неделя'], ['all', 'Всё'],
-];
+const accentHex = (habit, theme) => ACCENTS[habit.accent][theme];
 
-export function segmentHTML(range, { withAll = false } = {}) {
-  const items = RANGES
-    .filter(([k]) => withAll || k !== 'all')
-    .map(([k, l]) => `<button class="seg-item${k === range ? ' is-on' : ''}" data-action="set-range" data-range="${k}">${l}</button>`)
-    .join('');
-  return `<div class="segment">${items}</div>`;
-}
-
-const WD = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-
-export function heatmapHTML({ habit, range, theme, interactive }) {
-  const today = todayStr();
-  const { fromStr, toStr, mode } = rangeBounds(range, today, habit.createdAt);
-  const grid = buildGrid({
-    fromStr, toStr, entries: habit.entries,
-    todayStr: today, createdAtStr: habit.createdAt, mode,
-  });
-  const accent = ACCENTS[habit.accent][theme];
-
-  const tap = (c) => (interactive && c.state !== 'inactive'
-    ? ` data-action="toggle-cell" data-id="${habit.id}" data-date="${c.dateStr}"` : '');
-  const cellTag = (c) => `<i class="cell" data-state="${c.state}"${c.isToday ? ' data-today="1"' : ''}${tap(c)}></i>`;
-
-  if (grid.mode === 'week') {
-    const cells = grid.columns[0].cells.map((c) => (
-      `<div class="wk-cell">${cellTag(c)}<span>${WD[parseDate(c.dateStr).getDay()]}</span></div>`
-    )).join('');
-    return `<div class="heatmap" data-mode="week" style="--habit-accent:${accent}">${cells}</div>`;
+// ---- shared day cell ----
+function dayCell(dateStr, habit, today, interactive) {
+  if (!dateStr) return '<span class="day pad"></span>';
+  const st = dayState(dateStr, habit.entries, today);
+  const num = Number(dateStr.slice(8, 10));
+  if (interactive && st !== 'future') {
+    return `<button class="day" data-state="${st}" data-action="toggle-day" data-id="${habit.id}" data-date="${dateStr}"><span class="dot">${num}</span></button>`;
   }
-
-  const cols = grid.columns.map((col) => {
-    const label = `<span class="hm-month">${col.monthLabel ?? ''}</span>`;
-    const cells = col.cells.map(cellTag).join('');
-    return `<div class="hm-col">${label}<div class="hm-cells">${cells}</div></div>`;
-  }).join('');
-  return `<div class="heatmap" data-mode="grid" style="--habit-accent:${accent}">${cols}</div>`;
+  return `<span class="day" data-state="${st}"><span class="dot">${num}</span></span>`;
 }
 
-export function listHTML({ state, range, theme }) {
+function gridCells(ym, habit, today, interactive) {
+  return monthMatrix(ym.year, ym.month).flat()
+    .map((d) => dayCell(d, habit, today, interactive)).join('');
+}
+
+// ---- main screen ----
+export function miniMonthHTML({ ym, habit, today }) {
+  const isCur = ymKey(ym) === today.slice(0, 7);
+  return `<div class="mini-month${isCur ? ' is-cur' : ''}">`
+    + `<div class="mini-label">${monthName(ym.month)}</div>`
+    + `<div class="mini-grid">${gridCells(ym, habit, today, false)}</div>`
+    + `</div>`;
+}
+
+export function mainHTML({ state, theme }) {
   const today = todayStr();
-  const cards = state.habits.map((h) => {
-    const accent = ACCENTS[h.accent][theme];
-    const cs = currentStreak(h.entries, today);
-    const tot = totalDays(h.entries);
-    const done = !!h.entries[today];
-    return `
-      <div class="card" data-action="open-habit" data-id="${h.id}" style="--habit-accent:${accent}">
-        <div class="card-top">
-          <span class="card-emoji">${esc(h.emoji || '•')}</span>
-          <span class="card-title">${esc(h.name)}</span>
-          <span class="card-meta"><span class="fire">🔥</span> ${cs} · ${tot}d</span>
-        </div>
-        ${heatmapHTML({ habit: h, range, theme, interactive: false })}
-        <button class="check-btn${done ? ' is-done' : ''}" data-action="toggle-today" data-id="${h.id}">
-          ${done ? 'Отмечено сегодня' : 'Отметить сегодня'}
-        </button>
-      </div>`;
-  }).join('');
-
-  const empty = `
-    <div class="empty">
-      <p>Пока нет привычек.</p>
-      <button class="btn primary" data-action="add">Добавить привычку</button>
-    </div>`;
-
+  const cur = todayYM(today);
+  const strip = [shiftYM(cur, -1), cur, shiftYM(cur, 1)];
+  const cards = state.habits.map((h) => (
+    `<div class="card" data-action="open-habit" data-id="${h.id}" style="--habit-accent:${accentHex(h, theme)}">`
+    + `<div class="card-head"><span class="card-emoji">${esc(h.emoji || '•')}</span>`
+    + `<span class="card-title">${esc(h.name)}</span></div>`
+    + `<div class="strip">${strip.map((ym) => miniMonthHTML({ ym, habit: h, today })).join('')}</div>`
+    + `</div>`
+  )).join('');
+  const empty = '<div class="empty"><p>Пока нет привычек.</p>'
+    + '<button class="btn primary" data-action="add">Добавить привычку</button></div>';
   const banner = state._corrupt
     ? '<div class="banner-error" role="alert">Не удалось прочитать сохранённые данные. Начат новый список — старые данные не тронуты.</div>'
     : '';
-
   return `
     ${banner}
     <header class="app-header">
       <h1>Habits</h1>
       <button class="icon-btn" data-action="open-settings" aria-label="Настройки">⚙︎</button>
     </header>
-    ${segmentHTML(range, { withAll: false })}
     <main class="list">${state.habits.length ? cards : empty}</main>
     <button class="fab" data-action="add" aria-label="Добавить">+</button>`;
 }
 
-export function detailHTML({ state, id, range, theme }) {
+// ---- month view ----
+export function monthGridHTML({ ym, habit, today }) {
+  const isCur = ymKey(ym) === today.slice(0, 7);
+  const yearTag = ym.month === 0 ? ` ${ym.year}` : '';
+  return `<section class="month" data-ym="${ymKey(ym)}"${isCur ? ' data-cur="1"' : ''}>`
+    + `<h2 class="month-name${isCur ? ' is-cur' : ''}">${monthName(ym.month)}${yearTag}</h2>`
+    + `<div class="month-grid">${gridCells(ym, habit, today, true)}</div>`
+    + `</section>`;
+}
+
+export function monthGridsHTML({ months, habit, today }) {
+  return months.map((ym) => monthGridHTML({ ym, habit, today })).join('');
+}
+
+export function monthViewHTML({ state, id, months, theme }) {
   const h = getHabit(state, id);
   const today = todayStr();
-  const { fromStr, toStr } = rangeBounds(range, today, h.createdAt);
-  const rateFrom = fromStr < h.createdAt ? h.createdAt : fromStr;
-  const cs = currentStreak(h.entries, today);
-  const ls = longestStreak(h.entries);
-  const tot = totalDays(h.entries);
-  const { pct } = completionRate(h.entries, rateFrom, toStr);
-  const accent = ACCENTS[h.accent][theme];
-  const heading = `${h.emoji ? esc(h.emoji) + ' ' : ''}${esc(h.name)}`;
-
+  const navYear = todayYM(today).year;
+  const wk = weekdayLabels().map((w) => `<span>${w}</span>`).join('');
   return `
-    <header class="app-header">
-      <button class="icon-btn" data-action="back" aria-label="Назад">‹</button>
-      <h1>${heading}</h1>
-      <span class="icon-btn" aria-hidden="true"></span>
+    <header class="nav-bar">
+      <button class="nav-back" data-action="open-year" data-id="${h.id}"><span class="chev">‹</span>${navYear}</button>
+      <span class="nav-title">${h.emoji ? esc(h.emoji) + ' ' : ''}${esc(h.name)}</span>
+      <span class="nav-spacer"></span>
     </header>
-    <div class="detail-heat" style="--habit-accent:${accent}">
-      ${heatmapHTML({ habit: h, range, theme, interactive: true })}
-    </div>
-    ${segmentHTML(range, { withAll: true })}
-    <div class="stats">
-      <div class="stat"><b>${cs}</b><span>Текущий стрик</span></div>
-      <div class="stat"><b>${ls}</b><span>Лучший стрик</span></div>
-      <div class="stat"><b>${tot}</b><span>Всего дней</span></div>
-      <div class="stat"><b>${pct}%</b><span>За период</span></div>
-    </div>
-    <div class="detail-actions">
-      <button class="btn ghost" data-action="edit-habit" data-id="${h.id}">Изменить</button>
-      <button class="btn danger" data-action="delete-habit" data-id="${h.id}">Удалить</button>
+    <div class="weekday-row">${wk}</div>
+    <div class="month-scroll" id="month-scroll" style="--habit-accent:${accentHex(h, theme)}">${monthGridsHTML({ months, habit: h, today })}</div>`;
+}
+
+// ---- year view ----
+export function yearBlockHTML({ year, habit, today }) {
+  const minis = [];
+  for (let m = 0; m < 12; m += 1) {
+    const ym = { year, month: m };
+    const isCur = ymKey(ym) === today.slice(0, 7);
+    minis.push(
+      `<button class="ymini${isCur ? ' is-cur' : ''}" data-action="open-month" data-id="${habit.id}" data-year="${year}" data-month="${m}">`
+      + `<span class="ymini-label">${monthName(m)}</span>`
+      + `<span class="ymini-grid">${gridCells(ym, habit, today, false)}</span>`
+      + `</button>`,
+    );
+  }
+  return `<section class="year-block" data-year="${year}">`
+    + `<h2 class="year-heading">${year}</h2>`
+    + `<div class="year-grid">${minis.join('')}</div>`
+    + `</section>`;
+}
+
+export function yearBlocksHTML({ years, habit, today }) {
+  return years.map((year) => yearBlockHTML({ year, habit, today })).join('');
+}
+
+export function yearViewHTML({ state, id, years, theme }) {
+  const h = getHabit(state, id);
+  const today = todayStr();
+  return `
+    <header class="nav-bar">
+      <button class="nav-back" data-action="back-main"><span class="chev">‹</span>Привычки</button>
+      <span class="nav-title">${h.emoji ? esc(h.emoji) + ' ' : ''}${esc(h.name)}</span>
+      <span class="nav-spacer"></span>
+    </header>
+    <div class="year-scroll" id="year-scroll" style="--habit-accent:${accentHex(h, theme)}">${yearBlocksHTML({ years, habit: h, today })}</div>`;
+}
+
+// ---- bottom sheet (unchanged behaviour from v1, + grabber) ----
+export function sheetHTML({ sheet, state, theme }) {
+  const editing = sheet.mode === 'edit';
+  const h = editing ? getHabit(state, sheet.id) : null;
+  const name = sheet.name !== undefined ? sheet.name : (h ? h.name : '');
+  const emoji = sheet.emoji !== undefined ? sheet.emoji : (h ? h.emoji : '');
+  const dots = ACCENT_KEYS.map((k) => (
+    `<button class="accent-dot${k === sheet.accent ? ' is-on' : ''}" data-action="pick-accent" data-accent="${k}" style="--dot:${ACCENTS[k][theme]}" aria-label="${k}"></button>`
+  )).join('');
+  return `
+    <div class="sheet-backdrop" data-action="cancel-sheet"></div>
+    <div class="sheet" role="dialog" aria-modal="true" id="sheet-panel">
+      <div class="grabber"></div>
+      <h2>${editing ? 'Изменить привычку' : 'Новая привычка'}</h2>
+      <label class="field"><span>Название</span>
+        <input id="habit-name" type="text" maxlength="40" value="${esc(name)}" placeholder="Например, Читать 20 минут"></label>
+      <label class="field"><span>Эмодзи</span>
+        <input id="habit-emoji" type="text" maxlength="8" value="${esc(emoji)}" placeholder="необязательно"></label>
+      <div class="field"><span>Цвет</span><div class="accent-row">${dots}</div></div>
+      <div class="sheet-actions">
+        <button class="btn ghost" data-action="cancel-sheet">Отмена</button>
+        <button class="btn primary" data-action="save-habit">Сохранить</button>
+      </div>
     </div>`;
 }
 
-export function settingsHTML({ state, theme }) {
+// ---- settings ----
+export function settingsHTML({ state }) {
   const cur = state.settings.theme;
   const opts = [['system', 'Система'], ['light', 'Светлая'], ['dark', 'Тёмная']];
   const seg = opts.map(([k, l]) => (
     `<button class="seg-item${k === cur ? ' is-on' : ''}" data-action="set-theme" data-theme="${k}">${l}</button>`
   )).join('');
   return `
-    <header class="app-header">
-      <button class="icon-btn" data-action="back" aria-label="Назад">‹</button>
-      <h1>Настройки</h1>
-      <span class="icon-btn" aria-hidden="true"></span>
+    <header class="nav-bar">
+      <button class="nav-back" data-action="back-main"><span class="chev">‹</span>Привычки</button>
+      <span class="nav-title">Настройки</span>
+      <span class="nav-spacer"></span>
     </header>
-    <div class="settings-row">
-      <span>Тема</span>
-      <div class="segment">${seg}</div>
-    </div>`;
+    <div class="settings-row"><span>Тема</span><div class="segment">${seg}</div></div>`;
 }
 
-export function sheetHTML({ sheet, state, theme }) {
-  const editing = sheet.mode === 'edit';
-  const h = editing ? getHabit(state, sheet.id) : null;
-  const name = sheet.name !== undefined ? sheet.name : (h ? h.name : '');
-  const emoji = sheet.emoji !== undefined ? sheet.emoji : (h ? h.emoji : '');
-
-  const dots = ACCENT_KEYS.map((k) => (
-    `<button class="accent-dot${k === sheet.accent ? ' is-on' : ''}" data-action="pick-accent" data-accent="${k}" style="--dot:${ACCENTS[k][theme]}" aria-label="${k}"></button>`
-  )).join('');
-
+// ---- context menu ----
+export function contextMenuHTML({ habit }) {
   return `
-    <div class="sheet-backdrop" data-action="cancel-sheet"></div>
-    <div class="sheet" role="dialog" aria-modal="true">
-      <h2>${editing ? 'Изменить привычку' : 'Новая привычка'}</h2>
-      <label class="field">
-        <span>Название</span>
-        <input id="habit-name" type="text" maxlength="40" value="${esc(name)}" placeholder="Например, Читать 20 минут">
-      </label>
-      <label class="field">
-        <span>Эмодзи</span>
-        <input id="habit-emoji" type="text" maxlength="8" value="${esc(emoji)}" placeholder="необязательно">
-      </label>
-      <div class="field">
-        <span>Цвет</span>
-        <div class="accent-row">${dots}</div>
-      </div>
-      <div class="sheet-actions">
-        <button class="btn ghost" data-action="cancel-sheet">Отмена</button>
-        <button class="btn primary" data-action="save-habit">Сохранить</button>
-      </div>
+    <div class="ctx-backdrop" data-action="close-context"></div>
+    <div class="ctx-sheet">
+      <button class="ctx-item" data-action="edit-habit" data-id="${habit.id}">Изменить</button>
+      <button class="ctx-item danger" data-action="delete-habit" data-id="${habit.id}">Удалить</button>
     </div>`;
 }
