@@ -127,7 +127,7 @@ body {
 .mini-month.is-cur .mini-label { color:var(--today); }
 .mini-grid { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:1px; }
 .mini-grid .day { aspect-ratio:1; }
-.mini-grid .dot { width:15px; height:15px; font-size:9px; }
+.mini-grid .day .dot { width:15px; height:15px; font-size:9px; }
 .mini-grid .day[data-state="marked-today"] .dot { box-shadow:0 0 0 1.5px var(--today); }
 
 /* ===== shared day cell ===== */
@@ -190,7 +190,7 @@ button.day:active .dot { transform:scale(.86); }
 .ymini-label { display:block; font-size:13px; font-weight:700; margin:0 0 4px 2px; }
 .ymini.is-cur .ymini-label { color:var(--today); }
 .ymini-grid { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:1px; }
-.ymini-grid .dot { width:11px; height:11px; font-size:7px; }
+.ymini-grid .day .dot { width:11px; height:11px; font-size:7px; }
 .ymini-grid .day[data-state="marked-today"] .dot { box-shadow:0 0 0 1.5px var(--today); }
 
 /* ===== fab / buttons / empty ===== */
