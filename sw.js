@@ -1,4 +1,4 @@
-const CACHE = 'habits-cache-v1';
+const CACHE = 'habits-cache-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,7 @@ const ASSETS = [
   './js/ui.js',
   './js/storage.js',
   './js/stats.js',
-  './js/heatmap.js',
+  './js/calendar.js',
   './js/accents.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
