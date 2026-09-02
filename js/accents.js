@@ -1,15 +1,16 @@
-// Single source of truth for per-habit accent colours (spec §5.3).
+// Single source of truth for per-habit accent colours.
+// Muted / lower-saturation set so the calendar fills read calm, not neon.
 export const ACCENTS = {
-  indigo: { light: '#5B5BD6', dark: '#7C7CF0' },
-  blue:   { light: '#2F6FEB', dark: '#4C8DFF' },
-  cyan:   { light: '#0E9AB8', dark: '#35C4DE' },
-  green:  { light: '#1FA971', dark: '#34D399' },
-  lime:   { light: '#5F9E1F', dark: '#86C440' },
-  amber:  { light: '#D9931F', dark: '#F0B23C' },
-  orange: { light: '#E5622E', dark: '#FB8148' },
-  red:    { light: '#DC4B4B', dark: '#FF6060' },
-  pink:   { light: '#D6428A', dark: '#FF6BB0' },
-  purple: { light: '#8A4FD8', dark: '#A874F5' },
+  indigo: { light: '#6667AB', dark: '#8788C4' },
+  blue:   { light: '#4F7CB8', dark: '#6E9BD2' },
+  cyan:   { light: '#3E93A6', dark: '#5FB3C2' },
+  green:  { light: '#4E9C72', dark: '#6FBB8F' },
+  lime:   { light: '#7A9B4E', dark: '#9BBA72' },
+  amber:  { light: '#C39A55', dark: '#DAB77C' },
+  orange: { light: '#C67A52', dark: '#DB9A78' },
+  red:    { light: '#C25E5E', dark: '#D98686' },
+  pink:   { light: '#BE6E97', dark: '#D695B7' },
+  purple: { light: '#8E68B4', dark: '#AC8ECF' },
 };
 
 export const ACCENT_KEYS = Object.keys(ACCENTS);

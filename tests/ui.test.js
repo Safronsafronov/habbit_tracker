@@ -53,7 +53,7 @@ test('monthViewHTML: nav back button opens the year and sets --habit-accent', ()
   });
   assert.match(html, /data-action="open-year" data-id="h1"/);
   assert.ok(html.includes('id="month-scroll"'));
-  assert.ok(html.includes('--habit-accent:#2F6FEB')); // ACCENTS.blue.light
+  assert.ok(html.includes('--habit-accent:#4F7CB8')); // ACCENTS.blue.light
 });
 
 test('yearBlockHTML: 12 month buttons, current month flagged, sticky heading', () => {
