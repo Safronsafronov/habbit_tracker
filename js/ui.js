@@ -113,8 +113,8 @@ export function settingsHTML({ state, theme }) {
 export function sheetHTML({ sheet, state, theme }) {
   const editing = sheet.mode === 'edit';
   const h = editing ? state.habits.find((x) => x.id === sheet.id) : null;
-  const name = h ? h.name : '';
-  const emoji = h ? h.emoji : '';
+  const name = sheet.name !== undefined ? sheet.name : (h ? h.name : '');
+  const emoji = sheet.emoji !== undefined ? sheet.emoji : (h ? h.emoji : '');
 
   const dots = ACCENT_KEYS.map((k) => (
     `<button class="accent-dot${k === sheet.accent ? ' is-on' : ''}" data-action="pick-accent" data-accent="${k}" style="--dot:${ACCENTS[k][theme]}" aria-label="${k}"></button>`

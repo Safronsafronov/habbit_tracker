@@ -83,10 +83,15 @@ document.addEventListener('click', (e) => {
       sheet = { mode: 'edit', id: d.id, accent: getHabit(state, d.id).accent };
       render();
       break;
-    case 'pick-accent':
+    case 'pick-accent': {
+      const n = document.getElementById('habit-name');
+      const em = document.getElementById('habit-emoji');
+      if (n) sheet.name = n.value;
+      if (em) sheet.emoji = em.value;
       sheet.accent = d.accent;
       render();
       break;
+    }
     case 'cancel-sheet':
       sheet = null;
       render();
