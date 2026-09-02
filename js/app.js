@@ -57,6 +57,10 @@ function persist() {
 }
 
 // ---------- render windows ----------
+// true when ym `a` is an earlier calendar month than `b`
+function ymLt(a, b) {
+  return a.year < b.year || (a.year === b.year && a.month < b.month);
+}
 function ensureMonthWindow(id) {
   if (monthWindow && monthWindow.id === id) return;
   const cur = todayYM(todayStr());
@@ -151,6 +155,12 @@ function render(opts = {}) {
   let html;
   if (route.name === 'month') {
     ensureMonthWindow(route.id);
+    if (pendingMonthScroll) {
+      const ceil = shiftYM(todayYM(todayStr()), 1);
+      const want = ymLt(ceil, pendingMonthScroll) ? ceil : pendingMonthScroll;
+      if (ymLt(want, monthWindow.from)) monthWindow.from = shiftYM(want, -1);
+      pendingMonthScroll = want;
+    }
     html = monthViewHTML({ state, id: route.id, months: windowMonths(), theme });
   } else if (route.name === 'year') {
     ensureYearWindow(route.id);
