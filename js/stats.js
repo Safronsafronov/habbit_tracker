@@ -1,5 +1,6 @@
-// Pure date + statistics helpers. No DOM, no localStorage. All dates are local
-// "YYYY-MM-DD" strings; string comparison is a valid chronological compare.
+// Pure date helpers. No DOM, no localStorage. Dates are local "YYYY-MM-DD"
+// strings built from Date components; string comparison is a valid
+// chronological compare.
 
 export function formatDate(date) {
   const y = date.getFullYear();
@@ -39,55 +40,4 @@ export function enumerateDays(fromStr, toStr) {
     cur = addDays(cur, 1);
   }
   return out;
-}
-
-export function currentStreak(entries, today) {
-  const anchor = entries[today] ? today : addDays(today, -1);
-  if (!entries[anchor]) return 0;
-  let count = 0;
-  let cur = anchor;
-  while (entries[cur]) {
-    count++;
-    cur = addDays(cur, -1);
-  }
-  return count;
-}
-
-export function longestStreak(entries) {
-  const days = Object.keys(entries).filter((k) => entries[k]).sort();
-  let best = 0;
-  let run = 0;
-  let prev = null;
-  for (const d of days) {
-    run = prev !== null && addDays(prev, 1) === d ? run + 1 : 1;
-    if (run > best) best = run;
-    prev = d;
-  }
-  return best;
-}
-
-export function totalDays(entries) {
-  return Object.keys(entries).filter((k) => entries[k]).length;
-}
-
-export function completionRate(entries, fromStr, toStr) {
-  const days = enumerateDays(fromStr, toStr);
-  const total = days.length;
-  const done = days.filter((d) => entries[d]).length;
-  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-  return { done, total, pct };
-}
-
-const RANGE_WEEKS = { month: 5, q: 14, half: 26, year: 52 };
-
-export function rangeBounds(rangeKey, today, createdAtStr) {
-  if (rangeKey === 'week') {
-    return { fromStr: addDays(today, -6), toStr: today, mode: 'week' };
-  }
-  if (rangeKey === 'all') {
-    const base = createdAtStr <= today ? createdAtStr : today;
-    return { fromStr: mondayOf(base), toStr: today, mode: 'grid' };
-  }
-  const weeks = RANGE_WEEKS[rangeKey];
-  return { fromStr: addDays(mondayOf(today), -7 * (weeks - 1)), toStr: today, mode: 'grid' };
 }
