@@ -1,0 +1,86 @@
+import {
+  loadState, saveState, createHabit, updateHabit, deleteHabit,
+  toggleEntry, setTheme, nextAccent, getHabit,
+} from './storage.js';
+import { todayStr } from './stats.js';
+import { listHTML, detailHTML, sheetHTML, settingsHTML } from './ui.js';
+
+const appRoot = document.getElementById('app');
+const sheetRoot = document.getElementById('sheet');
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+const mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+let state = loadState(localStorage);
+let range = 'year';
+let sheet = null; // null | { mode:'add', accent } | { mode:'edit', id, accent }
+
+function resolvedTheme() {
+  const t = state.settings.theme;
+  return t === 'system' ? (mq.matches ? 'dark' : 'light') : t;
+}
+
+function applyTheme() {
+  const t = state.settings.theme;
+  if (t === 'system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', t);
+  themeMeta.setAttribute('content', resolvedTheme() === 'dark' ? '#0A0C0F' : '#F6F7F9');
+}
+
+function persist() {
+  saveState(localStorage, state);
+}
+
+function render() {
+  applyTheme();
+  const theme = resolvedTheme();
+  const hash = location.hash || '#/';
+
+  if (hash.startsWith('#/habit/')) {
+    const id = decodeURIComponent(hash.slice('#/habit/'.length));
+    if (!getHabit(state, id)) { location.hash = '#/'; return; }
+    appRoot.innerHTML = detailHTML({ state, id, range, theme });
+  } else if (hash === '#/settings') {
+    appRoot.innerHTML = settingsHTML({ state, theme });
+  } else {
+    appRoot.innerHTML = listHTML({ state, range, theme });
+  }
+
+  sheetRoot.innerHTML = sheet ? sheetHTML({ sheet, state, theme }) : '';
+  if (sheet) {
+    const n = document.getElementById('habit-name');
+    if (n) n.focus();
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const d = el.dataset;
+  switch (d.action) {
+    case 'open-settings':
+      location.hash = '#/settings';
+      break;
+    case 'open-habit':
+      location.hash = '#/habit/' + encodeURIComponent(d.id);
+      break;
+    case 'back':
+      location.hash = '#/';
+      break;
+    case 'set-range':
+      range = d.range;
+      render();
+      break;
+    case 'toggle-today':
+      state = toggleEntry(state, d.id, todayStr());
+      persist();
+      render();
+      break;
+    default:
+      break;
+  }
+});
+
+window.addEventListener('hashchange', render);
+mq.addEventListener('change', () => { if (state.settings.theme === 'system') render(); });
+
+render();
