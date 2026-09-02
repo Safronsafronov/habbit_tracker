@@ -25,6 +25,31 @@ test('loadState: corrupt JSON => default state, flagged', () => {
   assert.equal(s._corrupt, true);
 });
 
+test('migrate: habit with bogus accent => first accent key', () => {
+  const raw = JSON.stringify({ version: 1, habits: [{ id: 'h1', accent: 'bogus', entries: {} }] });
+  const s = loadState(fakeStorage({ [STORAGE_KEY]: raw }));
+  assert.equal(s.habits[0].accent, ACCENT_KEYS[0]);
+});
+
+test('migrate: habit with missing entries => {}', () => {
+  const raw = JSON.stringify({ version: 1, habits: [{ id: 'h1', accent: 'blue' }] });
+  const s = loadState(fakeStorage({ [STORAGE_KEY]: raw }));
+  assert.deepEqual(s.habits[0].entries, {});
+});
+
+test('migrate: habit with non-string createdAt => YYYY-MM-DD string', () => {
+  const raw = JSON.stringify({ version: 1, habits: [{ id: 'h1', accent: 'blue', createdAt: 12345 }] });
+  const s = loadState(fakeStorage({ [STORAGE_KEY]: raw }));
+  assert.match(s.habits[0].createdAt, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('migrate: non-object elements in habits are dropped', () => {
+  const raw = JSON.stringify({ version: 1, habits: [null, 'x', { id: 'h1', accent: 'blue', entries: {} }] });
+  const s = loadState(fakeStorage({ [STORAGE_KEY]: raw }));
+  assert.equal(s.habits.length, 1);
+  assert.equal(s.habits[0].id, 'h1');
+});
+
 test('loadState: partial object is migrated', () => {
   const s = loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify({ habits: [] }) }));
   assert.equal(s.version, 1);

@@ -4,6 +4,7 @@ import {
 } from './stats.js';
 import { buildGrid } from './heatmap.js';
 import { ACCENTS, ACCENT_KEYS } from './accents.js';
+import { getHabit } from './storage.js';
 
 export const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
@@ -79,7 +80,12 @@ export function listHTML({ state, range, theme }) {
       <button class="btn primary" data-action="add">Добавить привычку</button>
     </div>`;
 
+  const banner = state._corrupt
+    ? '<div class="banner-error" role="alert">Не удалось прочитать сохранённые данные. Начат новый список — старые данные не тронуты.</div>'
+    : '';
+
   return `
+    ${banner}
     <header class="app-header">
       <h1>Habits</h1>
       <button class="icon-btn" data-action="open-settings" aria-label="Настройки">⚙︎</button>
@@ -90,13 +96,14 @@ export function listHTML({ state, range, theme }) {
 }
 
 export function detailHTML({ state, id, range, theme }) {
-  const h = state.habits.find((x) => x.id === id);
+  const h = getHabit(state, id);
   const today = todayStr();
   const { fromStr, toStr } = rangeBounds(range, today, h.createdAt);
+  const rateFrom = fromStr < h.createdAt ? h.createdAt : fromStr;
   const cs = currentStreak(h.entries, today);
   const ls = longestStreak(h.entries);
   const tot = totalDays(h.entries);
-  const { pct } = completionRate(h.entries, fromStr, toStr);
+  const { pct } = completionRate(h.entries, rateFrom, toStr);
   const accent = ACCENTS[h.accent][theme];
   const heading = `${h.emoji ? esc(h.emoji) + ' ' : ''}${esc(h.name)}`;
 
@@ -142,7 +149,7 @@ export function settingsHTML({ state, theme }) {
 
 export function sheetHTML({ sheet, state, theme }) {
   const editing = sheet.mode === 'edit';
-  const h = editing ? state.habits.find((x) => x.id === sheet.id) : null;
+  const h = editing ? getHabit(state, sheet.id) : null;
   const name = sheet.name !== undefined ? sheet.name : (h ? h.name : '');
   const emoji = sheet.emoji !== undefined ? sheet.emoji : (h ? h.emoji : '');
 

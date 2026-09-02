@@ -24,6 +24,14 @@ Open <http://localhost:8000/>.
 
 All paths are relative, so the subdirectory URL works as-is.
 
+## Deploying an update
+
+The service worker caches all assets. After changing any file, bump the
+`CACHE` constant in `sw.js` (e.g. `habits-cache-v2`) and redeploy — the old
+cache is purged on the next launch. The page shell itself is fetched
+network-first, so HTML/routing changes show up on the next online launch even
+without a bump; JS/CSS/icon changes need the bump.
+
 ## Add to the iPhone home screen
 
 1. Open the Pages URL in Safari.

@@ -17,6 +17,18 @@ function migrate(state) {
   if (!state.settings || typeof state.settings !== 'object') state.settings = { theme: 'system' };
   if (!state.settings.theme) state.settings.theme = 'system';
   if (!Array.isArray(state.habits)) state.habits = [];
+  state.habits = state.habits
+    .filter((h) => h && typeof h === 'object')
+    .map((h) => ({
+      ...h,
+      id: typeof h.id === 'string' && h.id ? h.id : genId(),
+      name: typeof h.name === 'string' ? h.name.slice(0, 40) : '',
+      emoji: typeof h.emoji === 'string' ? h.emoji : '',
+      accent: ACCENT_KEYS.includes(h.accent) ? h.accent : ACCENT_KEYS[0],
+      createdAt: /^\d{4}-\d{2}-\d{2}$/.test(h.createdAt) ? h.createdAt : todayStr(),
+      archived: h.archived === true,
+      entries: h.entries && typeof h.entries === 'object' && !Array.isArray(h.entries) ? h.entries : {},
+    }));
   return state;
 }
 

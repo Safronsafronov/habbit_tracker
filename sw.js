@@ -13,6 +13,7 @@ const ASSETS = [
   './js/accents.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
 ];
 
@@ -32,7 +33,15 @@ self.addEventListener('fetch', (e) => {
   const { request } = e;
   if (request.method !== 'GET') return;
   if (request.mode === 'navigate') {
-    e.respondWith(caches.match('./index.html').then((r) => r || fetch(request)));
+    e.respondWith(
+      fetch(request)
+        .then((r) => {
+          const copy = r.clone();
+          caches.open(CACHE).then((c) => c.put('./index.html', copy));
+          return r;
+        })
+        .catch(() => caches.match('./index.html')),
+    );
     return;
   }
   e.respondWith(caches.match(request).then((r) => r || fetch(request)));

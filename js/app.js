@@ -27,6 +27,7 @@ function applyTheme() {
 }
 
 function persist() {
+  if (state._corrupt) return;
   saveState(localStorage, state);
 }
 
@@ -106,6 +107,7 @@ document.addEventListener('click', (e) => {
       } else {
         state = updateHabit(state, sheet.id, { name, emoji, accent: sheet.accent });
       }
+      delete state._corrupt;
       sheet = null;
       persist();
       render();
