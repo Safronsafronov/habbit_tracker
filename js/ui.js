@@ -89,9 +89,6 @@ export function listHTML({ state, range, theme }) {
     <button class="fab" data-action="add" aria-label="Добавить">+</button>`;
 }
 
-// --- Stubs. Real implementations land in later tasks; signatures are fixed now
-//     so app.js imports never change. ---
-
 export function detailHTML({ state, id, range, theme }) {
   const h = state.habits.find((x) => x.id === id);
   const today = todayStr();
@@ -125,14 +122,22 @@ export function detailHTML({ state, id, range, theme }) {
     </div>`;
 }
 
-// Task 8 replaces this.
 export function settingsHTML({ state, theme }) {
+  const cur = state.settings.theme;
+  const opts = [['system', 'Система'], ['light', 'Светлая'], ['dark', 'Тёмная']];
+  const seg = opts.map(([k, l]) => (
+    `<button class="seg-item${k === cur ? ' is-on' : ''}" data-action="set-theme" data-theme="${k}">${l}</button>`
+  )).join('');
   return `
     <header class="app-header">
       <button class="icon-btn" data-action="back" aria-label="Назад">‹</button>
-      <h1>Настройки</h1><span class="icon-btn"></span>
+      <h1>Настройки</h1>
+      <span class="icon-btn" aria-hidden="true"></span>
     </header>
-    <p class="empty">Настройки — Task 8.</p>`;
+    <div class="settings-row">
+      <span>Тема</span>
+      <div class="segment">${seg}</div>
+    </div>`;
 }
 
 export function sheetHTML({ sheet, state, theme }) {

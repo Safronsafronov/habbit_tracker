@@ -124,6 +124,11 @@ document.addEventListener('click', (e) => {
         render();
       }
       break;
+    case 'set-theme':
+      state = setTheme(state, d.theme);
+      persist();
+      render();
+      break;
     default:
       break;
   }
