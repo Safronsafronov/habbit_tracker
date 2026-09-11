@@ -170,9 +170,13 @@ body {
 .day[data-state="future"] { pointer-events:none; }
 .day[data-state="future"] .dot { color:var(--text-tertiary); }
 .day[data-state="today"] .dot { color:var(--today); font-weight:700; }
-.day[data-state="marked"] .dot { background:var(--habit-accent); color:#fff; font-weight:600; }
+.day[data-state="marked"] .dot {
+  background:color-mix(in srgb, var(--habit-accent) 55%, var(--surface-sunken));
+  color:#fff; font-weight:600;
+}
 .day[data-state="marked-today"] .dot {
-  background:var(--habit-accent); color:#fff; font-weight:700;
+  background:color-mix(in srgb, var(--habit-accent) 55%, var(--surface-sunken));
+  color:#fff; font-weight:700;
   box-shadow:0 0 0 2px var(--today);
 }
 button.day:active .dot { transform:scale(.86); }
