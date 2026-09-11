@@ -1,9 +1,10 @@
 import { ACCENTS, ACCENT_KEYS } from './accents.js';
 import { todayStr } from './stats.js';
 import {
-  monthMatrix, monthName, weekdayLabels, dayState, ymKey, shiftYM, todayYM,
+  monthMatrix, monthName, weekdayLabels, dayState, ymKey, todayYM,
 } from './calendar.js';
 import { getHabit } from './storage.js';
+import { heatWeeks } from './heat.js';
 
 export const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
@@ -27,26 +28,30 @@ function gridCells(ym, habit, today, interactive) {
     .map((d) => dayCell(d, habit, today, interactive)).join('');
 }
 
-// ---- main screen ----
-export function miniMonthHTML({ ym, habit, today }) {
-  const isCur = ymKey(ym) === today.slice(0, 7);
-  return `<div class="mini-month${isCur ? ' is-cur' : ''}">`
-    + `<div class="mini-label">${monthName(ym.month)}</div>`
-    + `<div class="mini-grid">${gridCells(ym, habit, today, false)}</div>`
-    + `</div>`;
+function heatDayCell(dateStr, habit, today) {
+  if (!dateStr) return '<span class="heat-day pad"></span>';
+  const st = dayState(dateStr, habit.entries, today);
+  return `<span class="heat-day" data-state="${st}" data-date="${dateStr}"></span>`;
 }
 
+export function heatStripHTML({ habit, today, weeks }) {
+  const cells = (weeks ?? heatWeeks(today)).flat().map((d) => heatDayCell(d, habit, today)).join('');
+  return `<div class="heat-scroll"><div class="heat-grid">${cells}</div></div>`;
+}
+
+// ---- main screen ----
 export function mainHTML({ state, theme }) {
   const today = todayStr();
-  const cur = todayYM(today);
-  const strip = [shiftYM(cur, -1), cur, shiftYM(cur, 1)];
-  const cards = state.habits.map((h) => (
-    `<div class="card" data-action="open-habit" data-id="${h.id}" style="--habit-accent:${accentHex(h, theme)}">`
-    + `<div class="card-head"><span class="card-emoji">${esc(h.emoji || '•')}</span>`
-    + `<span class="card-title">${esc(h.name)}</span></div>`
-    + `<div class="strip">${strip.map((ym) => miniMonthHTML({ ym, habit: h, today })).join('')}</div>`
-    + `</div>`
-  )).join('');
+  const weeks = heatWeeks(today);
+  const cards = state.habits.map((h) => {
+    const todayOn = dayState(today, h.entries, today) === 'marked-today';
+    return `<div class="card" data-action="open-habit" data-id="${h.id}" style="--habit-accent:${accentHex(h, theme)}">`
+      + `<div class="card-head"><span class="card-emoji">${esc(h.emoji || '•')}</span>`
+      + `<span class="card-title">${esc(h.name)}</span>`
+      + `<button class="check-btn" data-action="toggle-today" data-id="${h.id}" data-state="${todayOn ? 'on' : 'off'}" aria-label="Отметить сегодня">${todayOn ? '✓' : ''}</button></div>`
+      + `${heatStripHTML({ habit: h, today, weeks })}`
+      + `</div>`;
+  }).join('');
   const empty = '<div class="empty"><p>Пока нет привычек.</p>'
     + '<button class="btn primary" data-action="add">Добавить привычку</button></div>';
   const banner = state._corrupt
@@ -132,6 +137,7 @@ export function sheetHTML({ sheet, state, theme }) {
   const h = editing ? getHabit(state, sheet.id) : null;
   const name = sheet.name !== undefined ? sheet.name : (h ? h.name : '');
   const emoji = sheet.emoji !== undefined ? sheet.emoji : (h ? h.emoji : '');
+  const start = sheet.start !== undefined ? sheet.start : (h ? h.createdAt : todayStr());
   const dots = ACCENT_KEYS.map((k) => (
     `<button class="accent-dot${k === sheet.accent ? ' is-on' : ''}" data-action="pick-accent" data-accent="${k}" style="--dot:${ACCENTS[k][theme]}" aria-label="${k}"></button>`
   )).join('');
@@ -142,6 +148,8 @@ export function sheetHTML({ sheet, state, theme }) {
       <h2>${editing ? 'Изменить привычку' : 'Новая привычка'}</h2>
       <label class="field"><span>Название</span>
         <input id="habit-name" type="text" maxlength="40" value="${esc(name)}" placeholder="Например, Читать 20 минут"></label>
+      <label class="field"><span>Дата начала</span>
+        <input id="habit-start" type="date" max="${todayStr()}" value="${esc(start)}"></label>
       <label class="field"><span>Эмодзи</span>
         <input id="habit-emoji" type="text" maxlength="8" value="${esc(emoji)}" placeholder="необязательно"></label>
       <div class="field"><span>Цвет</span><div class="accent-row">${dots}</div></div>

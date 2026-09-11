@@ -5,6 +5,7 @@ import {
   createHabit, updateHabit, deleteHabit, toggleEntry, nextAccent, setTheme, getHabit,
 } from '../js/storage.js';
 import { ACCENT_KEYS } from '../js/accents.js';
+import { todayStr } from '../js/stats.js';
 
 function fakeStorage(init = {}) {
   const store = { ...init };
@@ -69,6 +70,18 @@ test('createHabit adds a habit with trimmed name and chosen accent', () => {
   assert.equal(habit.accent, 'blue');
   assert.deepEqual(habit.entries, {});
   assert.match(habit.id, /^h_[a-z0-9]{6}$/);
+});
+
+test('createHabit uses a provided createdAt', () => {
+  const { habit } = createHabit(makeDefaultState(), {
+    name: 'Читать', emoji: '📖', accent: 'blue', createdAt: '2026-01-15',
+  });
+  assert.equal(habit.createdAt, '2026-01-15');
+});
+
+test('createHabit falls back to today when createdAt is omitted', () => {
+  const { habit } = createHabit(makeDefaultState(), { name: 'Читать', emoji: '', accent: 'blue' });
+  assert.equal(habit.createdAt, todayStr());
 });
 
 test('nextAccent returns the first unused key in order', () => {

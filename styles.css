@@ -121,15 +121,33 @@ body {
 .card-emoji { font-size:17px; }
 .card-title { flex:1; font-size:15px; font-weight:600; letter-spacing:-.01em;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.strip { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
-.mini-month { min-width:0; }
-.mini-label { font-size:11px; font-weight:600; color:var(--text-secondary); margin-bottom:4px; }
-.mini-month.is-cur .mini-label { color:var(--today); }
-.mini-grid { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:2px; }
-.mini-grid .day { aspect-ratio:1; }
-/* small rounded squares that fill their cell — no overlap at any width */
-.mini-grid .day .dot { width:100%; height:100%; border-radius:3px; font-size:8px; }
-.mini-grid .day[data-state="marked-today"] .dot { box-shadow:inset 0 0 0 1.5px var(--today); }
+.check-btn {
+  width:28px; height:28px; border-radius:50%; flex-shrink:0;
+  display:grid; place-items:center; padding:0;
+  border:1.5px solid var(--habit-accent); background:transparent;
+  color:#fff; font-size:14px; font-weight:700; font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .09s var(--ease-ios), background .12s var(--ease-ios);
+}
+.check-btn[data-state="on"] { background:var(--habit-accent); }
+.check-btn:active { transform:scale(.86); }
+.heat-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+.heat-scroll::-webkit-scrollbar { display:none; }
+.heat-grid {
+  display:grid; grid-auto-flow:column;
+  grid-template-rows:repeat(7, 12px); grid-auto-columns:12px; gap:3px;
+  width:max-content;
+}
+.heat-day { width:12px; height:12px; border-radius:50%; background:var(--surface-sunken); position:relative; }
+.heat-day.pad { visibility:hidden; }
+.heat-day[data-state="plain"], .heat-day[data-state="today"] {
+  background:color-mix(in srgb, var(--habit-accent) 16%, var(--surface-sunken));
+}
+.heat-day[data-state="marked"], .heat-day[data-state="marked-today"] { background:var(--habit-accent); }
+.heat-day[data-state="today"]::after, .heat-day[data-state="marked-today"]::after {
+  content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:4px; height:4px; border-radius:50%; background:#fff;
+}
 
 /* ===== shared day cell ===== */
 .day {

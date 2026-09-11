@@ -19,7 +19,7 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const MONTH_BATCH = 12;
 
 let state = loadState(localStorage);
-let sheet = null;               // null | {mode:'add',accent,name?,emoji?} | {mode:'edit',id,accent,name?,emoji?}
+let sheet = null;               // null | {mode:'add',accent,name?,emoji?,start?} | {mode:'edit',id,accent,name?,emoji?,start?}
 let context = null;             // null | habitId  (set by Task 6 long-press)
 let suppressNextClick = false; // swallow the click that trails a fired long-press
 let firstRender = true;         // first render is instant (no slide)
@@ -29,6 +29,11 @@ let monthWindow = null;         // { id, from:{year,month}, to:{year,month} }
 let pendingMonthScroll = null;  // {year,month}
 let yearWindow = null;          // { id, from:number, to:number }
 let pendingYearScroll = null;   // {year,month}  (used by Task 5)
+
+function normalizeStart(value) {
+  const today = todayStr();
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && value <= today ? value : today;
+}
 
 // ---------- routing ----------
 function parseHash() {
@@ -227,6 +232,8 @@ function render(opts = {}) {
     scrollIntoContainer(sc, sc && (sc.querySelector('.ymini.is-cur') || sc.querySelector('.year-block')));
     pendingYearScroll = null;
     wireYearScroll(sc);
+  } else if (route.name === 'main') {
+    view.querySelectorAll('.heat-scroll').forEach((sc) => { sc.scrollLeft = sc.scrollWidth; });
   }
 
   sheetRoot.innerHTML = sheet ? sheetHTML({ sheet, state, theme }) : '';
@@ -272,6 +279,24 @@ document.addEventListener('click', (e) => {
       });
       break;
     }
+    case 'toggle-today': {
+      const today = todayStr();
+      state = toggleEntry(state, d.id, today);
+      persist();
+      const habit = getHabit(state, d.id);
+      const st = dayState(today, habit.entries, today);
+      const card = appRoot.querySelector(`.card[data-id="${d.id}"]`);
+      if (card) {
+        const btn = card.querySelector('.check-btn');
+        if (btn) {
+          btn.dataset.state = st === 'marked-today' ? 'on' : 'off';
+          btn.textContent = st === 'marked-today' ? '✓' : '';
+        }
+        const cell = card.querySelector(`.heat-day[data-date="${today}"]`);
+        if (cell) cell.dataset.state = st;
+      }
+      break;
+    }
     case 'set-theme':
       state = setTheme(state, d.theme);
       persist();
@@ -293,6 +318,8 @@ document.addEventListener('click', (e) => {
       const emojiEl = document.getElementById('habit-emoji');
       if (nameEl) sheet.name = nameEl.value;
       if (emojiEl) sheet.emoji = emojiEl.value;
+      const startEl = document.getElementById('habit-start');
+      if (startEl) sheet.start = startEl.value;
       sheet.accent = d.accent;
       render({ instant: true });
       break;
@@ -302,10 +329,11 @@ document.addEventListener('click', (e) => {
       const name = nameEl.value.trim();
       if (!name) { nameEl.focus(); return; }
       const emoji = document.getElementById('habit-emoji').value.trim();
+      const createdAt = normalizeStart(document.getElementById('habit-start').value);
       if (sheet.mode === 'add') {
-        state = createHabit(state, { name, emoji, accent: sheet.accent }).state;
+        state = createHabit(state, { name, emoji, accent: sheet.accent, createdAt }).state;
       } else {
-        state = updateHabit(state, sheet.id, { name, emoji, accent: sheet.accent });
+        state = updateHabit(state, sheet.id, { name, emoji, accent: sheet.accent, createdAt });
       }
       sheet = null;
       delete state._corrupt;
@@ -359,6 +387,7 @@ document.addEventListener('pointerdown', (e) => {
   if (sheet || context) return;
   const card = e.target.closest('.card');
   if (!card) return;
+  if (e.target.closest('input, button')) return;
   lpStartXY = { x: e.clientX, y: e.clientY };
   const id = card.dataset.id;
   lpTimer = setTimeout(() => {
