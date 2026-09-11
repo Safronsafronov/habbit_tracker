@@ -30,6 +30,11 @@ let pendingMonthScroll = null;  // {year,month}
 let yearWindow = null;          // { id, from:number, to:number }
 let pendingYearScroll = null;   // {year,month}  (used by Task 5)
 
+function normalizeStart(value) {
+  const today = todayStr();
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && value <= today ? value : today;
+}
+
 // ---------- routing ----------
 function parseHash() {
   const h = location.hash || '#/';
@@ -227,6 +232,8 @@ function render(opts = {}) {
     scrollIntoContainer(sc, sc && (sc.querySelector('.ymini.is-cur') || sc.querySelector('.year-block')));
     pendingYearScroll = null;
     wireYearScroll(sc);
+  } else if (route.name === 'main') {
+    view.querySelectorAll('.heat-scroll').forEach((sc) => { sc.scrollLeft = sc.scrollWidth; });
   }
 
   sheetRoot.innerHTML = sheet ? sheetHTML({ sheet, state, theme }) : '';
@@ -272,6 +279,24 @@ document.addEventListener('click', (e) => {
       });
       break;
     }
+    case 'toggle-today': {
+      const today = todayStr();
+      state = toggleEntry(state, d.id, today);
+      persist();
+      const habit = getHabit(state, d.id);
+      const st = dayState(today, habit.entries, today);
+      const card = appRoot.querySelector(`.card[data-id="${d.id}"]`);
+      if (card) {
+        const btn = card.querySelector('.check-btn');
+        if (btn) {
+          btn.dataset.state = st === 'marked-today' ? 'on' : 'off';
+          btn.textContent = st === 'marked-today' ? '✓' : '';
+        }
+        const cell = card.querySelector(`.heat-day[data-date="${today}"]`);
+        if (cell) cell.dataset.state = st;
+      }
+      break;
+    }
     case 'set-theme':
       state = setTheme(state, d.theme);
       persist();
@@ -293,6 +318,8 @@ document.addEventListener('click', (e) => {
       const emojiEl = document.getElementById('habit-emoji');
       if (nameEl) sheet.name = nameEl.value;
       if (emojiEl) sheet.emoji = emojiEl.value;
+      const startEl = document.getElementById('habit-start');
+      if (startEl) sheet.start = startEl.value;
       sheet.accent = d.accent;
       render({ instant: true });
       break;
@@ -302,10 +329,11 @@ document.addEventListener('click', (e) => {
       const name = nameEl.value.trim();
       if (!name) { nameEl.focus(); return; }
       const emoji = document.getElementById('habit-emoji').value.trim();
+      const createdAt = normalizeStart(document.getElementById('habit-start').value);
       if (sheet.mode === 'add') {
-        state = createHabit(state, { name, emoji, accent: sheet.accent }).state;
+        state = createHabit(state, { name, emoji, accent: sheet.accent, createdAt }).state;
       } else {
-        state = updateHabit(state, sheet.id, { name, emoji, accent: sheet.accent });
+        state = updateHabit(state, sheet.id, { name, emoji, accent: sheet.accent, createdAt });
       }
       sheet = null;
       delete state._corrupt;
