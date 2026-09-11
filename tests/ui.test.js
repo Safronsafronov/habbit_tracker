@@ -14,12 +14,15 @@ test('esc escapes the four HTML-significant characters', () => {
   assert.equal(esc('<b>&"x'), '&lt;b&gt;&amp;&quot;x');
 });
 
-test('mainHTML escapes a hostile habit name and renders a 3-month strip', () => {
+test('mainHTML escapes a hostile habit name and renders the heat strip', () => {
   const html = mainHTML({ state: stateWith(habit({ name: '<script>' })), theme: 'dark' });
   assert.ok(html.includes('&lt;script&gt;'));
   assert.ok(!html.includes('<script>'));
   assert.ok(html.includes('data-action="open-habit"'));
-  assert.equal((html.match(/class="mini-month/g) || []).length, 3);
+  assert.ok(html.includes('class="heat-scroll"'));
+  assert.ok(html.includes('class="heat-grid"'));
+  assert.ok(html.includes('data-action="toggle-today"'));
+  assert.equal((html.match(/class="heat-day" data-state="[^"]*" data-date="/g) || []).length, 365);
 });
 
 test('mainHTML renders the corrupt-data banner only when state._corrupt is set', () => {
