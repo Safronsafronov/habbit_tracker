@@ -27,7 +27,7 @@ All paths are relative, so the subdirectory URL works as-is.
 ## Deploying an update
 
 The service worker caches all assets. After changing any file, bump the
-`CACHE` constant in `sw.js` (e.g. `habits-cache-v2`) and redeploy — the old
+`CACHE` constant in `sw.js` (e.g. `habits-cache-v3`) and redeploy — the old
 cache is purged on the next launch. The page shell itself is fetched
 network-first, so HTML/routing changes show up on the next online launch even
 without a bump; JS/CSS/icon changes need the bump.

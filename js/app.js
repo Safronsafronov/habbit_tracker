@@ -19,7 +19,7 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const MONTH_BATCH = 12;
 
 let state = loadState(localStorage);
-let sheet = null;               // null | {mode:'add',accent,name?,emoji?} | {mode:'edit',id,accent,name?,emoji?}
+let sheet = null;               // null | {mode:'add',accent,name?,emoji?,start?} | {mode:'edit',id,accent,name?,emoji?,start?}
 let context = null;             // null | habitId  (set by Task 6 long-press)
 let suppressNextClick = false; // swallow the click that trails a fired long-press
 let firstRender = true;         // first render is instant (no slide)
@@ -387,6 +387,7 @@ document.addEventListener('pointerdown', (e) => {
   if (sheet || context) return;
   const card = e.target.closest('.card');
   if (!card) return;
+  if (e.target.closest('input, button')) return;
   lpStartXY = { x: e.clientX, y: e.clientY };
   const id = card.dataset.id;
   lpTimer = setTimeout(() => {

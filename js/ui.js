@@ -34,21 +34,22 @@ function heatDayCell(dateStr, habit, today) {
   return `<span class="heat-day" data-state="${st}" data-date="${dateStr}"></span>`;
 }
 
-export function heatStripHTML({ habit, today }) {
-  const cells = heatWeeks(today).flat().map((d) => heatDayCell(d, habit, today)).join('');
+export function heatStripHTML({ habit, today, weeks }) {
+  const cells = (weeks ?? heatWeeks(today)).flat().map((d) => heatDayCell(d, habit, today)).join('');
   return `<div class="heat-scroll"><div class="heat-grid">${cells}</div></div>`;
 }
 
 // ---- main screen ----
 export function mainHTML({ state, theme }) {
   const today = todayStr();
+  const weeks = heatWeeks(today);
   const cards = state.habits.map((h) => {
     const todayOn = dayState(today, h.entries, today) === 'marked-today';
     return `<div class="card" data-action="open-habit" data-id="${h.id}" style="--habit-accent:${accentHex(h, theme)}">`
       + `<div class="card-head"><span class="card-emoji">${esc(h.emoji || '•')}</span>`
       + `<span class="card-title">${esc(h.name)}</span>`
       + `<button class="check-btn" data-action="toggle-today" data-id="${h.id}" data-state="${todayOn ? 'on' : 'off'}" aria-label="Отметить сегодня">${todayOn ? '✓' : ''}</button></div>`
-      + `${heatStripHTML({ habit: h, today })}`
+      + `${heatStripHTML({ habit: h, today, weeks })}`
       + `</div>`;
   }).join('');
   const empty = '<div class="empty"><p>Пока нет привычек.</p>'
