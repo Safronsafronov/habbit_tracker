@@ -56,13 +56,13 @@ export function nextAccent(state) {
   return ACCENT_KEYS.find((k) => !used.has(k)) || ACCENT_KEYS[state.habits.length % ACCENT_KEYS.length];
 }
 
-export function createHabit(state, { name, emoji, accent }) {
+export function createHabit(state, { name, emoji, accent, createdAt }) {
   const habit = {
     id: genId(),
     name: name.trim().slice(0, 40),
     emoji: emoji || '',
     accent: accent || nextAccent(state),
-    createdAt: todayStr(),
+    createdAt: createdAt || todayStr(),
     archived: false,
     entries: {},
   };
