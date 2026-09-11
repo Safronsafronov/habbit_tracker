@@ -1,7 +1,7 @@
 import { ACCENTS, ACCENT_KEYS } from './accents.js';
 import { todayStr } from './stats.js';
 import {
-  monthMatrix, monthName, weekdayLabels, dayState, ymKey, todayYM,
+  monthMatrix, monthName, weekdayLabels, dayState, ymKey,
 } from './calendar.js';
 import { getHabit } from './storage.js';
 import { heatWeeks } from './heat.js';
@@ -64,7 +64,7 @@ export function mainHTML({ state, theme }) {
       <button class="icon-btn" data-action="open-settings" aria-label="Настройки">⚙︎</button>
     </header>
     <main class="list">${state.habits.length ? cards : empty}</main>
-    <button class="fab" data-action="add" aria-label="Добавить">+</button>`;
+    <button class="fab icon-btn" data-action="add" aria-label="Добавить">+</button>`;
 }
 
 // ---- month view ----
@@ -84,51 +84,15 @@ export function monthGridsHTML({ months, habit, today }) {
 export function monthViewHTML({ state, id, months, theme }) {
   const h = getHabit(state, id);
   const today = todayStr();
-  const navYear = todayYM(today).year;
   const wk = weekdayLabels().map((w) => `<span>${w}</span>`).join('');
   return `
     <header class="nav-bar">
-      <button class="nav-back" data-action="open-year" data-id="${h.id}"><span class="chev">‹</span>${navYear}</button>
+      <button class="icon-btn" data-action="back-main" aria-label="Назад">‹</button>
       <span class="nav-title">${h.emoji ? esc(h.emoji) + ' ' : ''}${esc(h.name)}</span>
-      <span class="nav-spacer"></span>
+      <span class="icon-btn" style="visibility:hidden" aria-hidden="true"></span>
     </header>
     <div class="weekday-row">${wk}</div>
     <div class="month-scroll" id="month-scroll" style="--habit-accent:${accentHex(h, theme)}">${monthGridsHTML({ months, habit: h, today })}</div>`;
-}
-
-// ---- year view ----
-export function yearBlockHTML({ year, habit, today }) {
-  const minis = [];
-  for (let m = 0; m < 12; m += 1) {
-    const ym = { year, month: m };
-    const isCur = ymKey(ym) === today.slice(0, 7);
-    minis.push(
-      `<button class="ymini${isCur ? ' is-cur' : ''}" data-action="open-month" data-id="${habit.id}" data-year="${year}" data-month="${m}">`
-      + `<span class="ymini-label">${monthName(m)}</span>`
-      + `<span class="ymini-grid">${gridCells(ym, habit, today, false)}</span>`
-      + `</button>`,
-    );
-  }
-  return `<section class="year-block" data-year="${year}">`
-    + `<h2 class="year-heading">${year}</h2>`
-    + `<div class="year-grid">${minis.join('')}</div>`
-    + `</section>`;
-}
-
-export function yearBlocksHTML({ years, habit, today }) {
-  return years.map((year) => yearBlockHTML({ year, habit, today })).join('');
-}
-
-export function yearViewHTML({ state, id, years, theme }) {
-  const h = getHabit(state, id);
-  const today = todayStr();
-  return `
-    <header class="nav-bar">
-      <button class="nav-back" data-action="back-main"><span class="chev">‹</span>Привычки</button>
-      <span class="nav-title">${h.emoji ? esc(h.emoji) + ' ' : ''}${esc(h.name)}</span>
-      <span class="nav-spacer"></span>
-    </header>
-    <div class="year-scroll" id="year-scroll" style="--habit-accent:${accentHex(h, theme)}">${yearBlocksHTML({ years, habit: h, today })}</div>`;
 }
 
 // ---- bottom sheet (unchanged behaviour from v1, + grabber) ----

@@ -3,9 +3,9 @@ import {
   toggleEntry, setTheme, nextAccent, getHabit,
 } from './storage.js';
 import { todayStr } from './stats.js';
-import { todayYM, listMonths, shiftYM, ymKey, dayState } from './calendar.js';
+import { todayYM, listMonths, shiftYM, dayState } from './calendar.js';
 import {
-  mainHTML, monthViewHTML, monthGridsHTML, yearViewHTML, yearBlocksHTML,
+  mainHTML, monthViewHTML, monthGridsHTML,
   settingsHTML, sheetHTML, contextMenuHTML,
 } from './ui.js';
 
@@ -26,9 +26,6 @@ let firstRender = true;         // first render is instant (no slide)
 let navDir = null;              // 1 = push, -1 = pop; set by a click handler before it changes the hash
 
 let monthWindow = null;         // { id, from:{year,month}, to:{year,month} }
-let pendingMonthScroll = null;  // {year,month}
-let yearWindow = null;          // { id, from:number, to:number }
-let pendingYearScroll = null;   // {year,month}  (used by Task 5)
 
 function normalizeStart(value) {
   const today = todayStr();
@@ -39,9 +36,7 @@ function normalizeStart(value) {
 function parseHash() {
   const h = location.hash || '#/';
   if (h === '#/settings') return { name: 'settings' };
-  let m = h.match(/^#\/h\/([^/]+)\/year$/);
-  if (m) return { name: 'year', id: decodeURIComponent(m[1]) };
-  m = h.match(/^#\/h\/([^/]+)$/);
+  const m = h.match(/^#\/h\/([^/]+)$/);
   if (m) return { name: 'month', id: decodeURIComponent(m[1]) };
   return { name: 'main' };
 }
@@ -63,27 +58,13 @@ function persist() {
 }
 
 // ---------- render windows ----------
-// true when ym `a` is an earlier calendar month than `b`
-function ymLt(a, b) {
-  return a.year < b.year || (a.year === b.year && a.month < b.month);
-}
 function ensureMonthWindow(id) {
   if (monthWindow && monthWindow.id === id) return;
   const cur = todayYM(todayStr());
   monthWindow = { id, from: shiftYM(cur, -MONTH_BATCH), to: shiftYM(cur, 1) };
 }
-function ensureYearWindow(id) {
-  if (yearWindow && yearWindow.id === id) return;
-  const y = todayYM(todayStr()).year;
-  yearWindow = { id, from: y - 1, to: y };
-}
 function windowMonths() {
   return listMonths(monthWindow.from, monthWindow.to);
-}
-function windowYears() {
-  const out = [];
-  for (let y = yearWindow.from; y <= yearWindow.to; y += 1) out.push(y);
-  return out;
 }
 
 // ---------- scrolling ----------
@@ -106,26 +87,6 @@ function wireMonthScroll(sc) {
     extending = false;
   }, { passive: true });
 }
-function wireYearScroll(sc) {
-  if (!sc) return;
-  let extending = false;
-  sc.addEventListener('scroll', () => {
-    if (extending) return;
-    const nearTop = sc.scrollTop < 200;
-    const nearBottom = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 200;
-    if (!nearTop && !nearBottom) return;
-    extending = true;
-    const prevHeight = sc.scrollHeight;
-    if (nearTop) yearWindow.from -= 1;
-    if (nearBottom) yearWindow.to += 1;
-    sc.innerHTML = yearBlocksHTML({
-      years: windowYears(), habit: getHabit(state, yearWindow.id), today: todayStr(),
-    });
-    if (nearTop) sc.scrollTop += sc.scrollHeight - prevHeight;
-    extending = false;
-  }, { passive: true });
-}
-
 function markLiftedCard() {
   appRoot.querySelectorAll('.card.lifted').forEach((c) => c.classList.remove('lifted'));
   if (context) {
@@ -190,7 +151,7 @@ function render(opts = {}) {
   const theme = resolvedTheme();
   const route = parseHash();
 
-  if ((route.name === 'month' || route.name === 'year') && !getHabit(state, route.id)) {
+  if (route.name === 'month' && !getHabit(state, route.id)) {
     location.hash = '#/';
     return;
   }
@@ -198,16 +159,7 @@ function render(opts = {}) {
   let html;
   if (route.name === 'month') {
     ensureMonthWindow(route.id);
-    if (pendingMonthScroll) {
-      const ceil = shiftYM(todayYM(todayStr()), 1);
-      const want = ymLt(ceil, pendingMonthScroll) ? ceil : pendingMonthScroll;
-      if (ymLt(want, monthWindow.from)) monthWindow.from = shiftYM(want, -1);
-      pendingMonthScroll = want;
-    }
     html = monthViewHTML({ state, id: route.id, months: windowMonths(), theme });
-  } else if (route.name === 'year') {
-    ensureYearWindow(route.id);
-    html = yearViewHTML({ state, id: route.id, years: windowYears(), theme });
   } else if (route.name === 'settings') {
     html = settingsHTML({ state });
   } else {
@@ -221,17 +173,8 @@ function render(opts = {}) {
   const view = appRoot.lastElementChild;
   if (route.name === 'month') {
     const sc = view.querySelector('#month-scroll');
-    const targetSel = pendingMonthScroll
-      ? `.month[data-ym="${ymKey(pendingMonthScroll)}"]`
-      : '.month[data-cur="1"]';
-    scrollIntoContainer(sc, sc && sc.querySelector(targetSel));
-    pendingMonthScroll = null;
+    scrollIntoContainer(sc, sc && sc.querySelector('.month[data-cur="1"]'));
     wireMonthScroll(sc);
-  } else if (route.name === 'year') {
-    const sc = view.querySelector('#year-scroll');
-    scrollIntoContainer(sc, sc && (sc.querySelector('.ymini.is-cur') || sc.querySelector('.year-block')));
-    pendingYearScroll = null;
-    wireYearScroll(sc);
   } else if (route.name === 'main') {
     view.querySelectorAll('.heat-scroll').forEach((sc) => { sc.scrollLeft = sc.scrollWidth; });
   }
@@ -256,10 +199,6 @@ document.addEventListener('click', (e) => {
     case 'open-habit':
       navDir = 1;
       location.hash = '#/h/' + encodeURIComponent(d.id);
-      break;
-    case 'open-year':
-      navDir = 1;
-      location.hash = '#/h/' + encodeURIComponent(d.id) + '/year';
       break;
     case 'back-main':
       navDir = -1;
@@ -344,11 +283,6 @@ document.addEventListener('click', (e) => {
     case 'cancel-sheet':
       sheet = null;
       render({ instant: true });
-      break;
-    case 'open-month':
-      navDir = 1;
-      pendingMonthScroll = { year: Number(d.year), month: Number(d.month) };
-      location.hash = '#/h/' + encodeURIComponent(d.id);
       break;
     case 'close-context':
       context = null;

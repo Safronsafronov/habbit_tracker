@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  esc, mainHTML, monthGridHTML, monthViewHTML, yearBlockHTML, contextMenuHTML,
+  esc, mainHTML, monthGridHTML, monthViewHTML, contextMenuHTML,
 } from '../js/ui.js';
 
 const habit = (over = {}) => ({
@@ -49,21 +49,15 @@ test('monthGridHTML: January heading carries the year, other months do not', () 
   assert.match(feb, /<h2 class="month-name">Февраль<\/h2>/);
 });
 
-test('monthViewHTML: nav back button opens the year and sets --habit-accent', () => {
+test('monthViewHTML: header has only an icon back button, no year link, and sets --habit-accent', () => {
   const html = monthViewHTML({
     state: stateWith(habit()), id: 'h1',
     months: [{ year: 2026, month: 8 }], theme: 'light',
   });
-  assert.match(html, /data-action="open-year" data-id="h1"/);
+  assert.match(html, /<button class="icon-btn" data-action="back-main" aria-label="Назад">‹<\/button>/);
+  assert.ok(!html.includes('open-year'));
   assert.ok(html.includes('id="month-scroll"'));
   assert.ok(html.includes('--habit-accent:#4F7CB8')); // ACCENTS.blue.light
-});
-
-test('yearBlockHTML: 12 month buttons, current month flagged, sticky heading', () => {
-  const html = yearBlockHTML({ year: 2026, habit: habit(), today: '2026-09-15' });
-  assert.equal((html.match(/class="ymini[ "]/g) || []).length, 12);
-  assert.match(html, /class="ymini is-cur" data-action="open-month" data-id="h1" data-year="2026" data-month="8"/);
-  assert.ok(html.includes('<h2 class="year-heading">2026</h2>'));
 });
 
 test('contextMenuHTML wires edit and delete for the habit id', () => {
