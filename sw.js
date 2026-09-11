@@ -10,6 +10,7 @@ const ASSETS = [
   './js/storage.js',
   './js/stats.js',
   './js/calendar.js',
+  './js/heat.js',
   './js/accents.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
